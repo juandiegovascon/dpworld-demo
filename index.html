@@ -253,7 +253,7 @@ html.unlocked .gate { display: none; }
       <div class="pts">
         <div class="pt"><span>Visita 1 · Origen</span><b>Terminal de retiro</b><small>Av. Argentina 2085, Callao</small></div>
         <div class="pt"><span>Visita 2 · Entrega</span><b>Planta del cliente</b><small>Punta Hermosa · -12.318997, -76.828820</small></div>
-        <div class="pt"><span>Visita 3 · Fin de servicio</span><b>Terminal de devolución</b><small>Av. Néstor Gambetta, lote 4, km 25</small></div>
+        <div class="pt"><span>Destino del vehículo</span><b>Terminal de devolución</b><small>Av. Néstor Gambetta, lote 4, km 25</small></div>
       </div>
 
       <div class="scen" role="group" aria-label="Qué simular">
@@ -373,7 +373,7 @@ html.unlocked .gate { display: none; }
   var BASE = { start: 240, lleg1: 300, ing1: 315, sal1: 435, lleg2: 515, ing2: 525, sal2: 825, lleg3: 920, ing3: 930, fin: 940, cita: 540 };
   var SERV = 300, TRAF = 10, STOP_AT = 465, STOP_DUR = 20, DEV_AT = 490, DEV_DUR = 25, DEV_SPEED = 250;
   var PARAMS = [
-    { k: 'auto', label: 'Radio del autocheckout', unit: 'm', min: 20, max: 150, step: 10, hint: 'Marca como completadas la visita a la planta y la de la terminal de devolución. En la terminal de origen el conductor hace el checkout en la app con el ID del contenedor.' },
+    { k: 'auto', label: 'Radio del autocheckout', unit: 'm', min: 20, max: 150, step: 10, hint: 'Marca como completada la visita a la planta. En la terminal de origen el conductor hace el checkout con el ID del contenedor; la terminal de devolución es el destino del vehículo y se cierra con «Finalizar ruta» dentro de su geocerca.' },
     { k: 'geo', label: 'Radio de la geocerca', unit: 'm', min: 200, max: 1000, step: 50, hint: 'Su entrada y su salida marcan la llegada y la salida de cada punto.' },
     { k: 'sobre', label: 'Sobrestadía', unit: 'h', min: 1, max: 6, step: 0.5, hint: 'Horas desde la cita en planta sin que la unidad salga de la planta.' },
     { k: 'desv', label: 'Desvío de ruta', unit: 'm', min: 200, max: 1500, step: 50, hint: 'Distancia a la ruta estándar.' },
@@ -425,18 +425,17 @@ html.unlocked .gate { display: none; }
       { t: T.lleg2, id: 'h4', title: 'Llegada a planta', det: 'Entra a la geocerca de ' + geo + ' m de la planta.' },
       { t: T.ing2, id: 'h5', title: 'Ingreso a planta', det: 'Autocheckout a ' + auto + ' m: visita 2 completada.' },
       { t: T.sal2, id: 'h6', title: 'Contenedor descargado', det: 'Sale de la geocerca de ' + geo + ' m de la planta: entrega completada. Toma la ruta de regreso con el contenedor vacío.' },
-      { t: T.ing3, id: 'h7', title: 'Fin de servicio', det: 'Autocheckout a ' + auto + ' m en la terminal de devolución: visita 3 completada, contenedor vacío devuelto.' }
+      { t: T.fin, id: 'h7', title: 'Fin de servicio', det: 'El conductor toca «Finalizar ruta» dentro de la geocerca de ' + geo + ' m de la terminal de devolución: contenedor vacío devuelto.' }
     ];
     hitos.forEach(function (h) { add({ t: h.t, kind: 'hito', id: h.id, title: h.title, det: h.det, msgs: [{ to: 'dest', text: hitoText(T, h) }] }); });
-    add({ t: T.lleg3, kind: 'info', title: 'Llegada a terminal de devolución', det: 'Entra a la geocerca de ' + geo + ' m. El cierre se avisa con el autocheckout.' });
-    add({ t: T.fin, kind: 'info', title: 'Finalizar ruta', det: 'El conductor toca «Finalizar ruta». ADA deja de seguir la unidad.' });
+    add({ t: T.lleg3, kind: 'info', title: 'Llegada a terminal de devolución', det: 'Entra a la geocerca de ' + geo + ' m del destino del vehículo. Desde aquí el conductor puede finalizar la ruta.' });
     if (sc.trafico) add({ t: T.sal1 + 5, kind: 'info', title: 'Tráfico en hora pico', det: 'Tránsito lento entre 06:00 y 08:00. ADA recalcula la ETA a planta: ' + hhmm(BASE.ing2 + TRAF) + ' (planificada ' + hhmm(BASE.ing2) + ').' });
 
-    var hs = [T.sal1, T.lleg2, T.ing2, T.sal2, T.ing3], idx = 0, last = T.ing1;
+    var hs = [T.sal1, T.lleg2, T.ing2, T.sal2, T.fin], idx = 0, last = T.ing1;
     for (var guard = 0; guard < 400; guard++) {
       var nh = hs[idx], np = last + P.freq;
       if (nh !== undefined && nh <= np) { last = nh; idx++; continue; }
-      if (np >= T.ing3) break;
+      if (np >= T.fin) break;
       add({ t: np, kind: 'per', title: 'Estatus periódico', det: 'Cada ' + P.freq + ' min desde el ingreso a la terminal.', msgs: [{ to: 'dest', text: perText(T, np) }] });
       last = np;
     }
@@ -485,8 +484,7 @@ html.unlocked .gate { display: none; }
     if (t < T.ing2) return 'Llegando a planta';
     if (t < T.sal2) return 'En planta';
     if (t < T.lleg3) return 'En tránsito';
-    if (t < T.ing3) return 'Llegando a terminal de devolución';
-    if (t < T.fin) return 'Contenedor vacío devuelto';
+    if (t < T.fin) return 'En la terminal de devolución';
     return 'Ruta finalizada';
   }
   function travelProg(T, t) {
@@ -614,8 +612,8 @@ html.unlocked .gate { display: none; }
     PARAMS.forEach(function (d) { L.push(d.label + ': ' + fmtNum(P[d.k]) + ' ' + d.unit + (P[d.k] !== DEF[d.k] ? '  (propuesta: ' + fmtNum(DEF[d.k]) + ')' : '')); });
     L.push('Nombre visible: ' + P.name);
     L.push('Campos del mensaje: ' + FIELDS.filter(function (f) { return P.fields[f[0]]; }).map(function (f) { return f[1]; }).join(', '));
-    L.push('', 'Trayecto: terminal de origen (Av. Argentina 2085, Callao) > planta del cliente (Punta Hermosa, -12.318997, -76.828820, cita 09:00, 5 h de servicio) > terminal de devolución (Av. Néstor Gambetta, lote 4, km 25) por una ruta de regreso distinta.');
-    L.push('Hitos: llegada a origen, contenedor cargado (checkout del conductor en la app con el ID del contenedor asignado), salida de origen, llegada a planta, ingreso a planta, contenedor descargado (salida de la geocerca de la planta) y fin de servicio (autocheckout en la terminal de devolución).');
+    L.push('', 'Trayecto (2 visitas; la terminal de devolución es el destino del vehículo): terminal de origen (Av. Argentina 2085, Callao) > planta del cliente (Punta Hermosa, -12.318997, -76.828820, cita 09:00, 5 h de servicio) > terminal de devolución (Av. Néstor Gambetta, lote 4, km 25) por una ruta de regreso distinta.');
+    L.push('Hitos: llegada a origen, contenedor cargado (checkout del conductor en la app con el ID del contenedor asignado), salida de origen, llegada a planta, ingreso a planta, contenedor descargado (salida de la geocerca de la planta) y fin de servicio (el conductor toca «Finalizar ruta» dentro de la geocerca de la terminal de devolución).');
     L.push('Estado en los periódicos mientras la unidad se mueve: En tránsito.');
     L.push('Canal: grupos de WhatsApp (estatus y monitoreo). Los participantes pueden consultar a ADA en el grupo.');
     return L.join('\n');
